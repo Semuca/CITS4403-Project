@@ -14,7 +14,7 @@ FIRE_EMISSION_KERNEL = np.array([[0, 0.6, 0], [0.6, 0.6, 0.6], [0, 0.6, 0]])
 
 # Smoke parameters
 SMOKE_EMISSION_KERNEL = np.array([[0, 0.2, 0], [0.2, 0, 0.2], [0, 0.2, 0]])
-SMOKE_DISPERSION = 0.8
+SMOKE_DISPERSION = 0.2
 
 # Heat parameters
 HEAT_DISPERSION = 0.04
@@ -67,8 +67,6 @@ class BurnSimulation():
 
         self.step_calculate_smoke(fires)
 
-        self.draw()
-
     def step_calculate_smoke(self, fires):
         # Calculate smoke dispersion:
 
@@ -79,38 +77,35 @@ class BurnSimulation():
         # 2. Calculate dispersion
         # Smoke modifications are a map of additions to the smoke content of each cell
         smokeModifications = np.zeros((len(self.environment), len(self.environment[0])))
-        for i in range(len(self.environment)):
-            for j in range(len(self.environment[i])):
-                cell = self.environment[i][j]
+        for y in range(len(self.environment)):
+            for x in range(len(self.environment[y])):
+                cell = self.environment[y][x]
 
-                # If no smoke is present, skip
-                if (cell.smokeContent == 0):
+                # If no smoke or neighbours are present, skip
+                if (cell.smokeContent == 0 or neighboursMap[y][x] == 0):
                     continue
 
                 # Get number of neighbours
-                neighbours = neighboursMap[i][j]
-                numNeighbours = neighbours.item().bit_length()
+                neighbours = neighboursMap[y][x]
+                numNeighbours = bin(neighbours).count('1')
 
                 # Remove smoke from cell
                 newSmokeValue = cell.smokeContent * SMOKE_DISPERSION
                 smokeModificationAdjustment = newSmokeValue - cell.smokeContent # Will be negative- smoke is dispersing from this tile
-                smokeModifications[i][j] += smokeModificationAdjustment
+                smokeModifications[y][x] += smokeModificationAdjustment
+
+                # Calculate how much smoke is going to each cell- will be positive
                 smokeSpread = -smokeModificationAdjustment / numNeighbours
 
                 # Add smoke to neighbours
-                for neighbour in [[1, 0], [0, 1], [-1, 0], [0, -1]]:
-                    # Break early if it goes out of bounds
-                    neighbourX = i + neighbour[0]
-                    neighbourY = j + neighbour[1]
-                    if neighbourX < 0 or neighbourX >= len(self.environment) or neighbourY < 0 or neighbourY >= len(self.environment[i]):
-                        continue
+                for neighbour in [[1, 0], [0, -1], [-1, 0], [0, 1]]:
+                    # There should never be a risk of going out of bounds with the convolution done before
+                    neighbourX = x + neighbour[0]
+                    neighbourY = y + neighbour[1]
                     
-                    if (self.environment[neighbourX][neighbourY].isBurnable):
-                        continue
-
-                    # if neighbours & 1: this should work
-                    smokeModifications[neighbourX][neighbourY] += smokeSpread
-                    # neighbours >>= 1
+                    if neighbours & 1:
+                        smokeModifications[neighbourY][neighbourX] += smokeSpread
+                    neighbours >>= 1
 
         # Calculate smoke emission from fire
         newSmoke = correlate2d(fires, SMOKE_EMISSION_KERNEL, mode='same', boundary='fill', fillvalue=0)
@@ -121,10 +116,10 @@ class BurnSimulation():
         newSmoke *= emptySpaceMap
 
         # Add smoke emissions to environment, maxxing out at 100%
-        for i in range(len(self.environment)):
-            for j in range(len(self.environment[i])):
-                cell = self.environment[i][j]
-                cell.smokeContent = min(cell.smokeContent + smokeModifications[i][j] + newSmoke[i][j], 1)
+        for y in range(len(self.environment)):
+            for x in range(len(self.environment[y])):
+                cell = self.environment[y][x]
+                cell.smokeContent = min(cell.smokeContent + smokeModifications[y][x] + newSmoke[y][x], 1)
 
     def draw(self):
         height, width = map.shape
