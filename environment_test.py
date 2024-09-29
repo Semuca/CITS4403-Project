@@ -12,8 +12,12 @@ FIRE_EMISSION_CELSIUS = 200
 FIRE_MAX_HEAT_CELSIUS = 1000
 FIRE_EMISSION_KERNEL = np.array([[0, 0.6, 0], [0.6, 0.6, 0.6], [0, 0.6, 0]])
 
+# Smoke parameters
+SMOKE_EMISSION_KERNEL = np.array([[0, 0.1, 0], [0.1, 0, 0.1], [0, 0.1, 0]])
+SMOKE_DISPERSION = 0.2
+
 # Heat parameters
-HEAT_DIFFUSION = 0.1
+HEAT_DISPERSION = 0.1
 
 # Display parameters
 MAX_HEAT_DISPLAY_CELSIUS = 100
@@ -23,9 +27,17 @@ MAX_HEAT_TRANSPARENCY = 0.5
 class Cell:
     def __init__(self, isBurnable):
         self.heatCelsius = ROOM_TEMPERATURE_CELSIUS
+
+        self.smokeContent = 0
         self.isBurnable = isBurnable
 
         self.isOnFire = False
+
+def hollow_dispersion_kernel(dispersion: float) -> np.ndarray:
+    return np.array([[0, dispersion, 0], [dispersion, 0, dispersion], [0, dispersion, 0]])
+
+def dispersion_kernel(dispersion: float) -> np.ndarray:
+    return np.array([[0, dispersion, 0], [dispersion, 1 - 4 * dispersion, dispersion], [0, dispersion, 0]])
 
 class BurnSimulation():
     def __init__(self, map):
@@ -37,7 +49,7 @@ class BurnSimulation():
     def step(self):
         # Calculate heat dispersion
         heatMap = np.array([[cell.heatCelsius for cell in row] for row in self.environment])
-        heatDispersion = correlate2d(heatMap, [[0, HEAT_DIFFUSION, 0], [HEAT_DIFFUSION, 1 - 4 * HEAT_DIFFUSION, HEAT_DIFFUSION], [0, HEAT_DIFFUSION, 0]], mode='same', boundary='fill', fillvalue=ROOM_TEMPERATURE_CELSIUS)
+        heatDispersion = correlate2d(heatMap, dispersion_kernel(HEAT_DISPERSION), mode='same', boundary='fill', fillvalue=ROOM_TEMPERATURE_CELSIUS)
 
         # Calculate heat emissions from fire using convolution
         fires = np.array([[cell.isOnFire for cell in row] for row in self.environment])
@@ -53,11 +65,39 @@ class BurnSimulation():
                 if cell.heatCelsius >= HEAT_FIRE_STARTS_CELSIUS and cell.isBurnable:
                     cell.isOnFire = True
 
+        self.step_calculate_smoke(fires)
+
         self.draw()
+
+    def step_calculate_smoke(self, fires):
+
+        # Calculate smoke dispersion:
+
+        # 1. Calculate how much smoke will be dispersed to each cell
+        smokeMap = np.array([[cell.smokeContent for cell in row] for row in self.environment])
+        smokeDispersion = correlate2d(smokeMap, dispersion_kernel(SMOKE_DISPERSION), mode='same', boundary='fill', fillvalue=0)
+
+        # Calculate smoke emission from fire
+        newSmoke = correlate2d(fires, SMOKE_EMISSION_KERNEL, mode='same', boundary='fill', fillvalue=0)
+
+        # Calculate number of empty spaces next to each cell
+        emptySpaceMap = np.array([[not cell.isBurnable for cell in row] for row in self.environment])
+
+        # Multiply smoke emissions by empty space map to prevent smoke from spreading to wall cells
+        # If a cell is not burnable (0) then the smoke emission to that cell is 0
+        # If a cell is burnable (1) then the smoke emission to that cell is the original smoke emission
+        newSmoke = (smokeDispersion + newSmoke) * emptySpaceMap
+
+        # Add smoke emissions to environment, maxxing out at 100%
+        for i in range(len(self.environment)):
+            for j in range(len(self.environment[i])):
+                cell = self.environment[i][j]
+                cell.smokeContent = min(cell.smokeContent + newSmoke[i][j], 1)
 
     def draw(self):
         height, width = map.shape
 
+        # Draw map
         plt.axis([0, height, 0, width])
         plt.xticks([])
         plt.yticks([])
@@ -86,6 +126,23 @@ class BurnSimulation():
 
         plt.imshow(heatMap, **options)
 
+        # Draw smoke on the environment
+        smokeMap = np.array([[cell.smokeContent for cell in row] for row in self.environment])
+        options={
+            "cmap": 'gray',
+            "alpha": 1,
+            "vmin": 0, "vmax": 1, 
+            "interpolation": 'none', 
+            "origin": 'upper',
+            "extent": [0, height, 0, width]
+        }
+
+        smokeMapImg = np.ones((height, width, 4)) * np.array([0, 0, 0, 1])
+        smokeMapImg[:, :, 3] = smokeMap
+
+        plt.imshow(smokeMapImg, **options)
+
+        # Draw fire
         fireXs = []
         fireYs = []
         for y in range(height):
