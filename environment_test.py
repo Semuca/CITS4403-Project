@@ -8,16 +8,16 @@ ROOM_TEMPERATURE_CELSIUS = 25
 HEAT_FIRE_STARTS_CELSIUS = 100
 
 # Fire parameters
-FIRE_EMISSION_CELSIUS = 200
+FIRE_EMISSION_CELSIUS = 150
 FIRE_MAX_HEAT_CELSIUS = 1000
 FIRE_EMISSION_KERNEL = np.array([[0, 0.6, 0], [0.6, 0.6, 0.6], [0, 0.6, 0]])
 
 # Smoke parameters
-SMOKE_EMISSION_KERNEL = np.array([[0, 0.1, 0], [0.1, 0, 0.1], [0, 0.1, 0]])
-SMOKE_DISPERSION = 0.2
+SMOKE_EMISSION_KERNEL = np.array([[0, 0.2, 0], [0.2, 0, 0.2], [0, 0.2, 0]])
+SMOKE_DISPERSION = 0.8
 
 # Heat parameters
-HEAT_DISPERSION = 0.1
+HEAT_DISPERSION = 0.04
 
 # Display parameters
 MAX_HEAT_DISPLAY_CELSIUS = 100
@@ -70,29 +70,61 @@ class BurnSimulation():
         self.draw()
 
     def step_calculate_smoke(self, fires):
-
         # Calculate smoke dispersion:
 
-        # 1. Calculate how much smoke will be dispersed to each cell
-        smokeMap = np.array([[cell.smokeContent for cell in row] for row in self.environment])
-        smokeDispersion = correlate2d(smokeMap, dispersion_kernel(SMOKE_DISPERSION), mode='same', boundary='fill', fillvalue=0)
+        # 1. Calculate the neighbours of each cell, encoded as a bitset
+        emptySpaceMap = np.array([[not cell.isBurnable for cell in row] for row in self.environment])
+        neighboursMap = correlate2d(emptySpaceMap, np.array([[0, 2, 0], [4, 0, 1], [0, 8, 0]]), mode='same', boundary='fill', fillvalue=0)
+
+        # 2. Calculate dispersion
+        # Smoke modifications are a map of additions to the smoke content of each cell
+        smokeModifications = np.zeros((len(self.environment), len(self.environment[0])))
+        for i in range(len(self.environment)):
+            for j in range(len(self.environment[i])):
+                cell = self.environment[i][j]
+
+                # If no smoke is present, skip
+                if (cell.smokeContent == 0):
+                    continue
+
+                # Get number of neighbours
+                neighbours = neighboursMap[i][j]
+                numNeighbours = neighbours.item().bit_length()
+
+                # Remove smoke from cell
+                newSmokeValue = cell.smokeContent * SMOKE_DISPERSION
+                smokeModificationAdjustment = newSmokeValue - cell.smokeContent # Will be negative- smoke is dispersing from this tile
+                smokeModifications[i][j] += smokeModificationAdjustment
+                smokeSpread = -smokeModificationAdjustment / numNeighbours
+
+                # Add smoke to neighbours
+                for neighbour in [[1, 0], [0, 1], [-1, 0], [0, -1]]:
+                    # Break early if it goes out of bounds
+                    neighbourX = i + neighbour[0]
+                    neighbourY = j + neighbour[1]
+                    if neighbourX < 0 or neighbourX >= len(self.environment) or neighbourY < 0 or neighbourY >= len(self.environment[i]):
+                        continue
+                    
+                    if (self.environment[neighbourX][neighbourY].isBurnable):
+                        continue
+
+                    # if neighbours & 1: this should work
+                    smokeModifications[neighbourX][neighbourY] += smokeSpread
+                    # neighbours >>= 1
 
         # Calculate smoke emission from fire
         newSmoke = correlate2d(fires, SMOKE_EMISSION_KERNEL, mode='same', boundary='fill', fillvalue=0)
 
-        # Calculate number of empty spaces next to each cell
-        emptySpaceMap = np.array([[not cell.isBurnable for cell in row] for row in self.environment])
-
         # Multiply smoke emissions by empty space map to prevent smoke from spreading to wall cells
         # If a cell is not burnable (0) then the smoke emission to that cell is 0
         # If a cell is burnable (1) then the smoke emission to that cell is the original smoke emission
-        newSmoke = (smokeDispersion + newSmoke) * emptySpaceMap
+        newSmoke *= emptySpaceMap
 
         # Add smoke emissions to environment, maxxing out at 100%
         for i in range(len(self.environment)):
             for j in range(len(self.environment[i])):
                 cell = self.environment[i][j]
-                cell.smokeContent = min(cell.smokeContent + newSmoke[i][j], 1)
+                cell.smokeContent = min(cell.smokeContent + smokeModifications[i][j] + newSmoke[i][j], 1)
 
     def draw(self):
         height, width = map.shape
