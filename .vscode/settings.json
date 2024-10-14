@@ -4,6 +4,7 @@
         "cairosvg",
         "cval",
         "fromarray",
+        "ndarray",
         "ndimage"
     ]
 }

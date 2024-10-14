@@ -5,11 +5,11 @@ import xml.etree.ElementTree as ET
 
 from PIL import Image
 import numpy as np
-from scipy.ndimage import convolve
+from scipy.ndimage import binary_fill_holes, convolve
 
 Image.MAX_IMAGE_PIXELS = None
 
-def remove_room_classes(svg_file):
+def remove_room_classes(svg_file: str) -> bytes:
     tree = ET.parse(svg_file)
     root = tree.getroot()
 
@@ -23,7 +23,7 @@ def remove_room_classes(svg_file):
 
     return modified_svg
 
-def crop_transparent(image):
+def crop_transparent(image: Image.Image) -> Image.Image:
     image = image.convert("RGBA")
     data = image.getdata()
 
@@ -42,28 +42,27 @@ def crop_transparent(image):
     
     return cropped_image
 
-def pixellate_image(image):
-    # Convert image to binary first
+def convert_to_binary(image: Image.Image) -> Image.Image:
     threshold = 1
     binary_image = image.convert("L").point(lambda x: 255 if x > threshold else 0, mode='1')
 
+    return binary_image
+
+def pixellate_image(image: Image.Image, resize_factor: int) -> Image.Image:
     # Resize image to make it pixellated
-    resize_factor = 10
-    small_image = binary_image.resize(
-        (binary_image.width // resize_factor, binary_image.height // resize_factor), 
+    small_image = image.resize(
+        (image.width // resize_factor, image.height // resize_factor), 
         Image.NEAREST
     )
 
     return small_image
 
-kernel = np.array([[1, 1, 1],
-                   [1, 1, 1],
-                   [1, 1, 1]])
+thicken_kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
 
-def thicken_lines(binary_image, kernel):
+def thicken_lines(binary_image: Image.Image) -> Image.Image:
     image_array = np.array(binary_image)
 
-    convolved = convolve(image_array, kernel, mode='constant', cval=0)
+    convolved = convolve(image_array, thicken_kernel, mode='constant', cval=0)
     thickened_image = (convolved > 0).astype(np.uint8) * 255
 
     return Image.fromarray(thickened_image, mode='L')
@@ -78,19 +77,27 @@ for filename in os.listdir(source_folder):
     if not filename.endswith('.svg'):
         continue
 
+    print(f'Processing {filename}...')
+
     # If we've already done the cropping work, let's skip doing it again
-    png_data = None
-    if os.path.exists(f'{output_folder}/{filename[:-4]}_original.png'):
-        png_data = open(f'{output_folder}/{filename[:-4]}_original.png', 'rb').read()
+    cropped_image = None
+    original_png_path = f'{output_folder}/{filename[:-4]}_original.png'
+    if os.path.exists(original_png_path):
+        cropped_image = Image.open(original_png_path)
     else:
         png_data = cairosvg.svg2png(bytestring=remove_room_classes(f"{source_folder}/{filename}"), output_width=12000, output_height=12000)
 
-    cropped_image = crop_transparent(Image.open(io.BytesIO(png_data)))
+        cropped_image = crop_transparent(Image.open(io.BytesIO(png_data)))
+        cropped_image.save(original_png_path)
 
-    cropped_image.save(f'{output_folder}/{filename[:-4]}_original.png')
+    binary_image = convert_to_binary(cropped_image)
 
-    pixellated_image = pixellate_image(cropped_image)
+    pixellated_image = pixellate_image(binary_image, 10)
 
-    thickened_image = thicken_lines(pixellated_image, kernel)
+    thickened_image = thicken_lines(pixellated_image)
 
-    thickened_image.save(f'{output_folder}/{filename[:-4]}.png')
+    final_image = pixellate_image(thickened_image, 3)
+
+    binary_filled_image = Image.fromarray(binary_fill_holes(np.array(final_image)))
+
+    binary_filled_image.save(f'{output_folder}/{filename[:-4]}.png')
