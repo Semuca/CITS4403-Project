@@ -15,7 +15,7 @@ def remove_room_classes(svg_file):
 
     namespaces = {'svg': 'http://www.w3.org/2000/svg'}
 
-    for tag in ['Room', 'Door']:
+    for tag in ['Room', 'Door', 'Separation']:
         for elem in root.findall(f'.//*[@class="{tag}"]', namespaces):
             root.remove(elem)
 
@@ -82,8 +82,10 @@ for filename in os.listdir(source_folder):
 
     cropped_image = crop_transparent(Image.open(io.BytesIO(png_data)))
 
+    cropped_image.save(f'{output_folder}/{filename[:-4]}_original.png')
+
     pixellated_image = pixellate_image(cropped_image)
 
     thickened_image = thicken_lines(pixellated_image, kernel)
 
-    thickened_image.save(f'data/{filename[:-4]}.png')
+    thickened_image.save(f'{output_folder}/{filename[:-4]}.png')
