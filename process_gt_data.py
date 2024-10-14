@@ -78,7 +78,12 @@ for filename in os.listdir(source_folder):
     if not filename.endswith('.svg'):
         continue
 
-    png_data = cairosvg.svg2png(bytestring=remove_room_classes(f"{source_folder}/{filename}"), output_width=12000, output_height=12000)
+    # If we've already done the cropping work, let's skip doing it again
+    png_data = None
+    if os.path.exists(f'{output_folder}/{filename[:-4]}_original.png'):
+        png_data = open(f'{output_folder}/{filename[:-4]}_original.png', 'rb').read()
+    else:
+        png_data = cairosvg.svg2png(bytestring=remove_room_classes(f"{source_folder}/{filename}"), output_width=12000, output_height=12000)
 
     cropped_image = crop_transparent(Image.open(io.BytesIO(png_data)))
 
