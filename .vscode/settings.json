@@ -2,9 +2,22 @@
     "cSpell.words": [
         "astype",
         "cairosvg",
+        "CITS",
+        "cmap",
         "cval",
+        "fillvalue",
         "fromarray",
+        "getdata",
+        "imshow",
         "ndarray",
-        "ndimage"
+        "ndim",
+        "ndimage",
+        "neighbour",
+        "Neighbours",
+        "pqueue",
+        "vmax",
+        "vmin",
+        "xticks",
+        "yticks"
     ]
 }
