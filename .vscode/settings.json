@@ -2,14 +2,19 @@
     "cSpell.words": [
         "argwhere",
         "astype",
+        "barabasi",
         "cairosvg",
         "CITS",
         "cmap",
+        "colour",
+        "colours",
         "cval",
         "dtype",
+        "figsize",
         "fillvalue",
         "fromarray",
         "getdata",
+        "ignorants",
         "imshow",
         "ndarray",
         "ndim",
@@ -17,10 +22,13 @@
         "ndindex",
         "neighbour",
         "Neighbours",
+        "networkx",
         "pqueue",
         "vmax",
         "vmin",
+        "xlabel",
         "xticks",
+        "ylabel",
         "yticks"
     ]
 }
