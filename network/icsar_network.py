@@ -118,8 +118,9 @@ class DKModel:
             self.draw()
 
 # Create a graph
-population_size = 4039
-graph = nx.barabasi_albert_graph(population_size, 44)
+POPULATION_SIZE = 4039
+CLIQUENESS = 44
+graph = nx.barabasi_albert_graph(POPULATION_SIZE, CLIQUENESS)
 
 # Status colours
 STATUS_COLOURS = {
@@ -136,7 +137,6 @@ STATUS_COLOURS = {
 # Parameters for the DK model
 INITIAL_RUMOUR_ADVOCATES = 1
 FRAME_REBUTTAL_STARTS = 5
-FRAME_REBUTTAL_ENDS = 20
 INITIAL_TRUTH_ADVOCATES = 5
 
 TRUTH_ACCEPTANCE_PROB = 0.5
