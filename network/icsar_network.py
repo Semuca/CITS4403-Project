@@ -16,7 +16,7 @@ class State(Enum):
     TRUTH_SPREADER = 7
     TRUTH_ADVOCATE = 8
 
-class DKModel:
+class ICSARModel:
     def __init__(self: Self, graph: Graph) -> None:
         self.graph = graph
         
@@ -118,7 +118,7 @@ class DKModel:
             colours.append(STATUS_COLOURS[state])
 
         nx.draw(self.graph, node_size=50, node_color=colours, with_labels=False)
-        plt.title('DK Model of Rumor Propagation on a Graph')
+        plt.title('ICSAR Model of Rumor Propagation on a Graph')
         plt.show()
 
     def run(self: Self, time_steps: int, draw=False) -> None:
@@ -173,8 +173,8 @@ TRUTH_CARRIER_TO_RUMOUR_PROB = 0.05
 
 IGNORE_PROB = 0.1
 
-# Run the DK model
-dk_model = DKModel(graph)
+# Run the ICSAR model
+dk_model = ICSARModel(graph)
 dk_model.run(TIME_STEPS, draw=False)
 
 # Plotting the results
@@ -197,7 +197,7 @@ plt.show()
 # final_rumour_sizes = []
 
 # for _ in range(100):
-#     dk_model = DKModel(graph)
+#     dk_model = ICSARModel(graph)
 #     dk_model.run(TIME_STEPS, draw=False)
 #     final_rumour_sizes.append(dk_model.ta_history[-1] / POPULATION_SIZE)
 
