@@ -62,6 +62,14 @@ class DKModel:
                     elif self.states[neighbor] == State.RUMOUR_CARRIER:
                         if np.random.random() < RUMOUR_CARRIER_TO_SPREADER_PROB:
                             new_states[neighbor] = State.RUMOUR_SPREADER
+                    # If neighbour is truth carrier
+                    elif self.states[neighbor] == State.TRUTH_CARRIER:
+                        if np.random.random() < TRUTH_CARRIER_TO_RUMOUR_PROB:
+                            new_states[neighbor] = State.RUMOUR_CARRIER
+                    # If neighbour is truth spreader
+                    elif self.states[neighbor] == State.TRUTH_SPREADER:
+                        if np.random.random() < TRUTH_SPREADER_TO_RUMOUR_PROB:
+                            new_states[neighbor] = State.RUMOUR_CARRIER
             elif state == State.TRUTH_SPREADER or state == State.TRUTH_ADVOCATE:
                 neighbors = list(self.graph.neighbors(node))
 
@@ -79,6 +87,14 @@ class DKModel:
                     elif self.states[neighbor] == State.TRUTH_CARRIER:
                         if np.random.random() < TRUTH_CARRIER_TO_SPREADER_PROB:
                             new_states[neighbor] = State.TRUTH_SPREADER
+                    # If neighbour is rumour carrier
+                    elif self.states[neighbor] == State.RUMOUR_CARRIER:
+                        if np.random.random() < RUMOUR_CARRIER_TO_TRUTH_PROB:
+                            new_states[neighbor] = State.TRUTH_CARRIER
+                    # If neighbour is rumour spreader
+                    elif self.states[neighbor] == State.RUMOUR_SPREADER:
+                        if np.random.random() < RUMOUR_SPREADER_TO_TRUTH_PROB:
+                            new_states[neighbor] = State.TRUTH_CARRIER
         
         self.states = new_states
         
@@ -138,6 +154,7 @@ STATUS_COLOURS = {
 INITIAL_RUMOUR_ADVOCATES = 1
 FRAME_REBUTTAL_STARTS = 5
 INITIAL_TRUTH_ADVOCATES = 5
+TIME_STEPS = 50
 
 TRUTH_ACCEPTANCE_PROB = 0.5
 RUMOUR_ACCEPTANCE_PROB = 0.20
@@ -148,11 +165,17 @@ TRUTH_CARRIER_TO_SPREADER_PROB = 0.2
 RUMOUR_SPREADER_TO_ADVOCATE_PROB = 0.1
 TRUTH_SPREADER_TO_ADVOCATE_PROB = 0.2
 
+RUMOUR_SPREADER_TO_TRUTH_PROB = 0.01
+TRUTH_SPREADER_TO_RUMOUR_PROB = 0.005
+
+RUMOUR_CARRIER_TO_TRUTH_PROB = 0.1
+TRUTH_CARRIER_TO_RUMOUR_PROB = 0.05
+
 IGNORE_PROB = 0.1
 
 # Run the DK model
 dk_model = DKModel(graph)
-dk_model.run(50, draw=False)
+dk_model.run(TIME_STEPS, draw=False)
 
 # Plotting the results
 plt.figure(figsize=(10, 6))
@@ -175,8 +198,8 @@ plt.show()
 
 # for _ in range(100):
 #     dk_model = DKModel(graph)
-#     dk_model.run(100, draw=False)
-#     final_rumour_sizes.append(dk_model.ta_history[-1] / population_size)
+#     dk_model.run(TIME_STEPS, draw=False)
+#     final_rumour_sizes.append(dk_model.ta_history[-1] / POPULATION_SIZE)
 
 # plt.figure(figsize=(10, 6))
 # plt.hist(final_rumour_sizes, bins=20, range=(0, 1))

@@ -94,16 +94,18 @@ class DKModel:
             self.step()
 
             # If all nodes are either spreaders or stiflers, stop the simulation
-            if all(state == State.STIFLER or state == State.SPREADER for state in self.states.values()):
-                break
+            # if all(state == State.STIFLER or state == State.SPREADER for state in self.states.values()):
+            #     break
         if draw:
             self.draw()
 
 # Create a graph
-population_size = 4039
-graph = nx.barabasi_albert_graph(population_size, 44)
+POPULATION_SIZE = 4039
+CLIQUENESS = 44
+graph = nx.barabasi_albert_graph(POPULATION_SIZE, CLIQUENESS)
 
 # Parameters for the DK model
+TIME_STEPS = 25
 RUMOUR_ACCEPTANCE_PROB = 0.20
 SPREADER_SPREADER_STIFLE_PROB = 0.05
 SPREADER_STIFLER_STIFLE_PROB = 0.1
@@ -111,7 +113,7 @@ FORGET_PROB = 0.5
 
 # Run the DK model
 dk_model = DKModel(graph, initial_infected=1)
-dk_model.run(100, draw=False)
+dk_model.run(TIME_STEPS, draw=False)
 
 # Plotting the results
 plt.figure(figsize=(10, 6))
@@ -129,7 +131,7 @@ plt.show()
 
 # for _ in range(100):
 #     dk_model = DKModel(graph, initial_infected=1)
-#     dk_model.run(100, draw=False)
+#     dk_model.run(TIME_STEPS, draw=False)
 #     final_rumour_sizes.append(dk_model.s_history[-1] / population_size)
 
 # plt.figure(figsize=(10, 6))
