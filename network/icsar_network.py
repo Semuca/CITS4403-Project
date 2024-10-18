@@ -152,7 +152,7 @@ IGNORE_PROB = 0.1
 
 # Run the DK model
 dk_model = DKModel(graph)
-dk_model.run(100, draw=False)
+dk_model.run(50, draw=False)
 
 # Plotting the results
 plt.figure(figsize=(10, 6))
