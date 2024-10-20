@@ -1,5 +1,6 @@
 {
     "cSpell.words": [
+        "arange",
         "argwhere",
         "astype",
         "barabasi",
@@ -12,6 +13,7 @@
         "compmodelling",
         "cval",
         "darkgreen",
+        "Deffuant",
         "dtype",
         "edgecolor",
         "edgelist",
@@ -25,6 +27,7 @@
         "ipynb",
         "lawngreen",
         "micromamba",
+        "ncols",
         "ndarray",
         "ndim",
         "ndimage",
@@ -34,7 +37,9 @@
         "networkx",
         "pqueue",
         "recognise",
+        "rects",
         "sfdp",
+        "Visualisation",
         "vmax",
         "vmin",
         "xlabel",
